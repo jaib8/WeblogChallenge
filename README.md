@@ -2,6 +2,7 @@
 
 1. Sessionize the web log by IP. Sessionize = aggregrate all page hits by visitor/IP during a fixed time window.
     https://en.wikipedia.org/wiki/Session_(web_analytics)
+    
     [Session information per IP](results/Sessionize.txt)
     For each IP, session information contains Session Number, Total URLs accessed in that session, unique URLs accessed in that session.
     This should also answer 3.
@@ -31,6 +32,7 @@
     ```
 
 2. Determine the average session time
+
     [Average session time per IP](results/Avg_Session.txt)
     Sorted in descending order of the session time.
     Output example:
@@ -56,9 +58,11 @@
     ```
 
 3. Determine unique URL visits per session. To clarify, count a hit to a unique URL only once per session.
+
     Please see 1.
 
 4. Find the most engaged users, ie the IPs with the longest session times
+
     [List of IPs with longest session times](results/Max_Session.txt)
     The list is sorted in descending order of the max session time.
     Output example:
