@@ -31,8 +31,8 @@ object webpaytm {
     sc.stop()
   }
   def isNewSession(x:DateTime, y:DateTime) : Int = {
-    // If the y > x+15mins return 1, y and x are in different sessions
-    if(y.compareTo(x.plusMinutes(15)).>(0)) 1 else 0
+    // If the y > x+30mins return 1, y and x are in different sessions
+    if(y.compareTo(x.plusMinutes(30)).>(0)) 1 else 0
   }
   def timeDiff(x:DateTime, y:DateTime): Int = {
     Math.abs(x.getMillis - y.getMillis).toInt
@@ -57,7 +57,7 @@ object webpaytm {
       if (time_list.head.size.>(1)) {
         for (l2 <- time_list) {
           if (isNewSession(l2.head, l2(1)) == 1) {
-            // Increment Session count as time stamps are >15mins apart
+            // Increment Session count as time stamps are >30mins apart
             count += 1
           }
           // Only add the 2nd element as 1st would have been
@@ -114,7 +114,7 @@ object webpaytm {
         for (l2 <- time_url_list) {
           // Tricky to have extra parans to use += for ListBuffer
           if (isNewSession(l2.head._1, l2(1)._1) == 1) {
-            // Increment Session count as time stamps are >15mins apart
+            // Increment Session count as time stamps are >30mins apart
             count += 1
           }
           // Only add the 2nd element as 1st would have been
