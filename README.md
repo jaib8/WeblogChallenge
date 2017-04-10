@@ -97,9 +97,7 @@ http://hortonworks.com/hdp/downloads/
 
 ### Additional notes:
 - IP addresses do not guarantee distinct users, but this is the limitation of the data. As a bonus, consider what additional data would help make better analytical conclusions
-  - Using IP with port number, port number should signify unique connection
-  - If IP:port are same then parsing the user agent to check Brower type/ OS type
+  - Using IP with port number, Ip:port should signify unique connection
+  - If (IP,port) pair is same then inspect the user agent to check Brower type/ OS type 
 - For this dataset, complete the sessionization by time window rather than navigation. Feel free to determine the best session window time on your own, or start with 15 minutes.
-  - I've used 30mins as per https://support.google.com/analytics/answer/2731565?hl=en
-- The log file was taken from an AWS Elastic Load Balancer:
-http://docs.aws.amazon.com/ElasticLoadBalancing/latest/DeveloperGuide/access-log-collection.html#access-log-entry-format
+  - I've used 30mins following https://support.google.com/analytics/answer/2731565?hl=en
