@@ -6,6 +6,12 @@ import scala.collection.mutable.ListBuffer
 /**
   * Created by jaideepbajwa on 2017-04-05.
   */
+/**
+  * Following ENV Variables needs to be set:
+  * AWS_ACCESS_KEY_ID (aws access key id needed to access s3 storage)
+  * AWS_SECRETACCESS_KEY (aws secret access key needed to access s3 storage)
+  * OUTPUT_DIR (Absolute path of the result's directory)
+  */
 
 object webpaytm {
   def main(args: Array[String]): Unit ={
