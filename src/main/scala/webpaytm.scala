@@ -13,20 +13,19 @@ object webpaytm {
     conf.set("spark.cores.max", "4")
     val sc = new SparkContext(conf)
     val hdconf = sc.hadoopConfiguration
-    hdconf.set("fs.s3n.impl", "org.apache.hadoop.fs.s3native.NativeS3FileSystem")
     hdconf.set("fs.s3n.awsAccessKeyId", sys.env("AWS_ACCESS_KEY_ID") )
     hdconf.set("fs.s3n.awsSecretAccessKey", sys.env("AWS_SECRETACCESS_KEY"))
     var distFile = sc.textFile("s3n://paytmfile/2015_07_22_mktplace_shop_web_log_sample.log.gz").cache()
     var weblog = new WebLogParser
-    // Pair of <IP, timestamp>
     // Apply group by key to key <IP, list of time stamps>
     val ip_time = distFile.map(l => (weblog.parseRecord(l).client_ip, weblog.parseRecord(l).timestamp)).groupByKey().map({case (a,b) => (a,b.toList.sortBy(_.getMillis))})
+    // Apply group by key to key <IP, list of (timestamps, URL)>
     val ip_time_url = distFile.map(l => (weblog.parseRecord(l).client_ip, (weblog.parseRecord(l).timestamp,weblog.parseRecord(l).request))).groupByKey().map({case (a,b) => (a, b.toList.sortBy(_._1.getMillis))})
-    // Collect data, bring back to driver and call function to calculate sessions
-    // Session count for each IP
-    // List of (IP, iterable(timestamp))
+    // Collect data, bring back to driver and call SessionTime to calculate sessions times
+    // List of (IP, List(timestamp)) , where iterable(timestamp) is a sorted list of timestamps
     SessionTime(ip_time.collect())
-    // List of (IP, iterable(timestamp, URL))
+    // Collect data, bring back to driver and call Sessionize to calculate URL info in each session
+    // List of (IP, List(timestamp, URL)), where iterable(timestamp, URL) is sorted with timestamps
     Sessionize(ip_time_url.collect())
     sc.stop()
   }
@@ -34,10 +33,15 @@ object webpaytm {
     // If the y > x+30mins return 1, y and x are in different sessions
     if(y.compareTo(x.plusMinutes(30)).>(0)) 1 else 0
   }
+
+  // Returns the delta between 2 timestamps in milliseconds
   def timeDiff(x:DateTime, y:DateTime): Int = {
-    Math.abs(x.getMillis - y.getMillis).toInt
+    var diff = (x.getMillis - y.getMillis).toInt
+    // Return -1 to debug incorrect session time calculation
+    if (diff.<(0)) -1 else diff
   }
 
+  // Write to a filename specified by file
   def PrintToFile(file: File) (op: PrintWriter => Unit): Unit = {
     val p = new PrintWriter(file)
     try { op(p)} catch { case e: Exception => println(s"Exception caught: $e");} finally {p.close()}
@@ -80,6 +84,7 @@ object webpaytm {
       IP_session += ip -> session_dur
     }
     val total_ip = IP_session.size
+    // Writing to file
     PrintToFile(new File(s"${sys.env("OUTPUT_DIR")}Max_Session.txt")) { p =>
       p.println(s"Total Number of IP Addresses Analyzed = ${total_ip}")
       p.println(s"${"-".*(50)}")
@@ -89,6 +94,7 @@ object webpaytm {
         p.println(s"${x._1} ${" ".*(15 - x._1.length)} |${" ".*(5)}${x._2}")
       }
     }
+    // Writing to file
     PrintToFile(new File(s"${sys.env("OUTPUT_DIR")}Avg_Session.txt")) { p =>
       p.println(s"Total Number of IP Addresses Analyzed = ${total_ip}")
       p.println(s"${"-".*(50)}")
@@ -112,7 +118,6 @@ object webpaytm {
       session_url += count -> time_url_list.head.head._2
       if (time_url_list.head.size.>(1)) {
         for (l2 <- time_url_list) {
-          // Tricky to have extra parans to use += for ListBuffer
           if (isNewSession(l2.head._1, l2(1)._1) == 1) {
             // Increment Session count as time stamps are >30mins apart
             count += 1
@@ -124,6 +129,7 @@ object webpaytm {
       }
       session += ip -> session_url.groupBy(_._1).toList
     }
+    // Writing to file
     // Print Session info for each IP
     // Sort with number of sessions per IP (getting the size of the map containing the session#->URL)
     PrintToFile(new File(s"${sys.env("OUTPUT_DIR")}Sessionize.txt")) { p =>
