@@ -12,10 +12,10 @@
 ```
 > ./spark-submit --master <spark master url> --packages org.apache.hadoop:hadoop-aws:2.7.1,com.amazonaws:aws-java-sdk:1.7.4 --class WebPaytmLog[RDD|DS] webpaytm_2.11-1.0.jar [1-4]
 ```
-WebPaytmLogRDD : Solution using RDD
-WebPaytmLogDS : Solution using DS
-Argument: [1-4] number correspoinding to question in `Processing & Analytical goals`
-
+### Note:
+- WebPaytmLogRDD : Solution using RDD
+- WebPaytmLogDS : Solution using DS
+- Argument: [1-4] number correspoinding to question in `Processing & Analytical goals`
 
 # WeblogChallenge
 This is an interview challenge for Paytm Labs. Please feel free to fork. Pull Requests will be ignored.
