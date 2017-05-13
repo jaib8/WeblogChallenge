@@ -1,18 +1,16 @@
 /**
   * Created by jaideepbajwa on 2017-05-13.
   */
-
 import java.sql.Timestamp
-
 import org.joda.time.DateTime
 import org.scalatest.FlatSpec
+
 class TestParser extends FlatSpec{
 
   def parselog (line: String) : WebLog = {
     val weblog = new WebLogParser
     weblog.parseRecord(line)
   }
-  // This test needs the file fixture
   "Input Web log" should "be parsed correctly" in {
     var parsedlog = parselog("2015-07-22T09:00:28.002726Z marketpalce-shop 223.225.236.110:32279 10.0.4.176:80 0.000025 0.069531 0.000021 200 200 105 532 \"POST https://paytm.com:443/api/v1/expresscart/checkout?wallet=1 HTTP/1.1\" \"Mozilla/5.0 (iPhone; CPU iPhone OS 6_1_2 like Mac OS X) AppleWebKit/536.26 (KHTML, like Gecko) Version/6.0 Mobile/10B146 Safari/8536.25\" ECDHE-RSA-AES128-SHA256 TLSv1.2")
     assert(parsedlog.client_ip === "223.225.236.110")
