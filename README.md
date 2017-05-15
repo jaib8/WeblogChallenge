@@ -15,45 +15,105 @@
 ### Note:
 - WebPaytmLogRDD : Solution using RDD
 - WebPaytmLogDS : Solution using DS
-- Argument: [1-4] number correspoinding to question in `Processing & Analytical goals`
+- Argument: [1-4] number corresponding to question in `Processing & Analytical goals`
 
-# WeblogChallenge
-This is an interview challenge for Paytm Labs. Please feel free to fork. Pull Requests will be ignored.
-
-The challenge is to make make analytical observations about the data using the distributed tools below.
-
-## Processing & Analytical goals:
+## Processing & Analytical goals(results):
 
 1. Sessionize the web log by IP. Sessionize = aggregrate all page hits by visitor/IP during a fixed time window.
     https://en.wikipedia.org/wiki/Session_(web_analytics)
+    ```    
+    +--------------+-------+                                                        
+    |            IP|URLHits|
+    +--------------+-------+
+    | 119.81.61.166|  13431|
+    |  52.74.219.71|  11609|
+    |  52.74.219.71|   9467|
+    |  52.74.219.71|   7852|
+    | 119.81.61.166|   7817|
+    | 106.186.23.95|   5114|
+    | 106.51.132.54|   4399|
+    |  52.74.219.71|   3831|
+    | 119.81.61.166|   3429|
+    |  52.74.219.71|   3090|
+    | 119.81.61.166|   2987|
+    | 106.186.23.95|   2848|
+    | 54.169.20.106|   2838|
+    |  54.169.0.163|   2560|
+    |  54.169.1.152|   2538|
+    |54.169.164.205|   2520|
+    |  52.74.219.71|   2295|
+    |  54.169.64.74|   2223|
+    |  54.169.1.152|   1955|
+    |112.196.25.164|   1946|
+    +--------------+-------+
+    only showing top 20 rows
+    ```
 
 2. Determine the average session time
+    ```
+    164030.66078807763ms
+    ```
 
 3. Determine unique URL visits per session. To clarify, count a hit to a unique URL only once per session.
+    ```
+    +--------------+-------------+                                                  
+    |            IP|UniqueURLHits|
+    +--------------+-------------+
+    |  52.74.219.71|         9532|
+    | 119.81.61.166|         9013|
+    |  52.74.219.71|         7916|
+    | 119.81.61.166|         5791|
+    |  52.74.219.71|         5424|
+    | 106.186.23.95|         4656|
+    | 119.81.61.166|         3333|
+    | 119.81.61.166|         2840|
+    | 106.186.23.95|         2731|
+    | 54.169.20.106|         2648|
+    | 106.51.132.54|         2609|
+    |  52.74.219.71|         2572|
+    |  52.74.219.71|         2467|
+    |  54.169.1.152|         2426|
+    |  54.169.0.163|         2423|
+    |54.169.164.205|         2413|
+    |  54.169.64.74|         2129|
+    |  52.74.219.71|         2037|
+    |  54.169.1.152|         1909|
+    |  52.74.59.227|         1808|
+    +--------------+-------------+
+    only showing top 20 rows
+    ```
 
 4. Find the most engaged users, ie the IPs with the longest session times
-
-## Additional questions for Machine Learning Engineer (MLE) candidates:
-1. Predict the expected load (requests/second) in the next minute
-
-2. Predict the session length for a given IP
-
-3. Predict the number of unique URL visits by a given IP
+    ```
+    +---------------+---------------+                                               
+    |             IP|SessionTime[ms]|
+    +---------------+---------------+
+    |  220.226.206.7|        3248164|
+    |   52.74.219.71|        2069162|
+    |  119.81.61.166|        2068849|
+    |  106.186.23.95|        2068756|
+    |   125.19.44.66|        2068713|
+    |   125.20.39.66|        2068320|
+    |   192.8.190.10|        2067235|
+    |  54.251.151.39|        2067023|
+    | 180.211.69.209|        2066961|
+    | 202.167.250.59|        2066330|
+    | 180.179.213.70|        2065638|
+    | 203.189.176.14|        2065594|
+    |213.239.204.204|        2065587|
+    |  122.15.156.64|        2065520|
+    | 103.29.159.138|        2065413|
+    | 203.191.34.178|        2065346|
+    | 180.151.80.140|        2065250|
+    |    78.46.60.71|        2064862|
+    | 103.29.159.186|        2064699|
+    | 125.16.218.194|        2064475|
+    +---------------+---------------+
+    only showing top 20 rows
+    ```
 
 ### Tools allowed (in no particular order):
-- Spark (any language, but prefer Scala or Java)
-- Pig
-- MapReduce (Hadoop 2.x only)
-- Flink
-- Cascading, Cascalog, or Scalding
-
-If you need Hadoop, we suggest 
-HDP Sandbox:
-http://hortonworks.com/hdp/downloads/
-or 
-CDH QuickStart VM:
-http://www.cloudera.com/content/cloudera/en/downloads.html
-
+- Spark (Scala)
 
 ### Additional notes:
 - You are allowed to use whatever libraries/parsers/solutions you can find provided you can explain the functions you are implementing in detail.
@@ -61,24 +121,3 @@ http://www.cloudera.com/content/cloudera/en/downloads.html
 - For this dataset, complete the sessionization by time window rather than navigation. Feel free to determine the best session window time on your own, or start with 15 minutes.
 - The log file was taken from an AWS Elastic Load Balancer:
 http://docs.aws.amazon.com/ElasticLoadBalancing/latest/DeveloperGuide/access-log-collection.html#access-log-entry-format
-
-
-
-## How to complete this challenge:
-
-A. Fork this repo in github
-    https://github.com/PaytmLabs/WeblogChallenge
-
-B. Complete the processing and analytics as defined first to the best of your ability with the time provided.
-
-C. Place notes in your code to help with clarity where appropriate. Make it readable enough to present to the Paytm Labs interview team.
-
-D. Complete your work in your own github repo and send the results to us and/or present them during your interview.
-
-## What are we looking for? What does this prove?
-
-We want to see how you handle:
-- New technologies and frameworks
-- Messy (ie real) data
-- Understanding data transformation
-This is not a pass or fail test, we want to hear about your challenges and your successes with this particular problem.
