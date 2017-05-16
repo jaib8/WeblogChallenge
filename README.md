@@ -246,9 +246,23 @@
 ### Tools allowed (in no particular order):
 - Spark (Scala)
 
+### Observation and design decision:
+- The primary algorithm in this assignment is to find sessions. To create sessions I have used the following approach:
+    * Group all timestamps together in a Iterable for each IP.
+    * Sort the Iterable of timestamps chronologically (ascending order of timestamps).
+    * Group the Iteable of timestamps in pairs of 2 using sliding method.
+    * Iterate through all the pairs and compare the each element of the pair to decide if they belong to the same session or not ( if timediff > timewindow). If same session, then associate them with the specific session count (session count initialized to 0), else increment the session count and associate with that.
+    * Now the result is for each IP you have a tuple like (IP,  (count number, (timestamp iterable associated with the session count number), (URL iterable associated with the session count number))).
+- Previously I was using joda's Datetime to store timestamp, when implementing DataSet/DataFrame solution I made a switch to java.sql.TimeStamp (since Datetime is not supported by DF). This resulted in 1.7x performance gain (from 50sec -> 28 secs). (running on macbook pro 2015, 4 cores)
+- The DS solution has the same RDD algorithm to find sessions. Just converting the log to DF would not give enough information to sessionize.
+- The perfomance of both RDD and DS solution is similar (~30secs). But once schema is created DS is definitely easier to query data.
+- Used **sbt** to package jar file, **s3(aws)** to access input log file and **Intellij** for IDE.
+
 ### Additional notes:
-- You are allowed to use whatever libraries/parsers/solutions you can find provided you can explain the functions you are implementing in detail.
 - IP addresses do not guarantee distinct users, but this is the limitation of the data. As a bonus, consider what additional data would help make better analytical conclusions
+
+    Using IP with port number, Ip:port should signify unique connection
+    If (IP,port) pair is same then inspect the user agent to check Brower type/ OS type
 - For this dataset, complete the sessionization by time window rather than navigation. Feel free to determine the best session window time on your own, or start with 15 minutes.
-- The log file was taken from an AWS Elastic Load Balancer:
-http://docs.aws.amazon.com/ElasticLoadBalancing/latest/DeveloperGuide/access-log-collection.html#access-log-entry-format
+
+    The timewindow can be easily changed, in one function (isNewSession). I've used 30mins following https://support.google.com/analytics/answer/2731565?hl=en
