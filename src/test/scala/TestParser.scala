@@ -1,12 +1,17 @@
 /**
   * Created by jaideepbajwa on 2017-05-13.
   */
+
 import java.sql.Timestamp
+
 import org.joda.time.DateTime
 import org.scalatest.FlatSpec
-
 class TestParser extends FlatSpec{
-
+  /**
+    * Create WebLogParser object and call parseRecord method on input line
+    * @param line test input
+    * @return WebLog object
+    */
   def parselog (line: String) : WebLog = {
     val weblog = new WebLogParser
     weblog.parseRecord(line)

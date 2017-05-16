@@ -23,17 +23,36 @@ object WebPaytmLogRDD {
 
   type IpTimeUrlSessioned = (String, Iterable[(Int, Iterable[Timestamp], Iterable[String])])
 
+  /**
+    * Following method creates an object of class WebLogParser and calls its method parseRecord
+    * on a log input line. If the input line is corrupted the result will be None,
+    * hence this function is called via flatmap.
+    * @param line input log
+    * @return tuple of (IP, (Timestamp, URL))
+    */
   def convertToIpTimeUrl( line : String) : Option[IpTimeUrl] = {
     val webLog = new WebLogParser
     val parsedLine = webLog.parseRecord(line)
     if (parsedLine.equals(webLog.EmptyLog)) None else Some(parsedLine.client_ip, (parsedLine.timestamp, parsedLine.request))
   }
 
+  /**
+    * Sort the input chronologically
+    *
+    * @param line of type (IP, Iterable[(Timestamp, URL)])
+    * @return Sorted Iterable by ascending order of Timestamp
+    */
   def sortIpTimeUrlRdd ( line : IpTimeUrlGroup) : IpTimeUrlGroup = {
     (line._1, line._2.toList.sortBy(_._1.getTime))
   }
+
+  /**
+    * To determine if 2 timestamp belong to same session or not
+    * @param x Timestamp 1
+    * @param y Timestamp 2
+    * @return If different session return 1 else 0
+    */
   def isNewSession(x:Timestamp, y:Timestamp) : Int = {
-    // If the y > x+30mins return 1, y and x are in different sessions
     // 30 [mins] * 60 [secs/mins] * 1000 [ms/secs] = 1800000ms
     val win30 :Long = 30 * 60 * 1000
     // Increment x's time by 30mins
@@ -41,6 +60,12 @@ object WebPaytmLogRDD {
     // Compare with Y
     if(y.compareTo(temp)>0) 1 else 0
   }
+
+  /**
+    * Split the input in sessions
+    * @param line of type (IP, Iterable[(Timestamp, URL)])
+    * @return of type (IP, Iterable[(SessionCount, Iterable[Timestamp], Iterable[URL])])
+    */
   def splitInSession (line : IpTimeUrlGroup) :IpTimeUrlSessioned = {
     var SessionTimeURL = new ListBuffer[(Int, Timestamp, String)]()
     // List with sliding 2 to group by session
@@ -69,33 +94,60 @@ object WebPaytmLogRDD {
     val SessionTimeURLGrouped = SessionTimeURL.groupBy(_._1).map(x => (x._1 , x._2.map(y => y._2).sortBy(_.getTime) ,  x._2.map(y => y._3))).toList.sortBy(_._1)
     (line._1, SessionTimeURLGrouped)
   }
-  // Returns the delta between 2 timestamps in milliseconds
+
+  /**
+    * To calutation difference in 2 timestamps
+    * @param x Timestamp 1
+    * @param y Timestamp 2
+    * @return Return delta in milliseconds if result > 0 , else return -1
+    */
   def timeDiff(x:Timestamp, y:Timestamp): Int = {
     val diff = (x.getTime - y.getTime).toInt
     // Return -1 to debug incorrect session time calculation
     if (diff.<(0)) -1 else diff
   }
 
-  def trasnformRdd (rdd : RDD[String]) : RDD[IpTimeUrlSessioned] = {
+  /**
+    * Apply various transformations
+    * @param rdd input log in RDD
+    * @return rdd of type (String, Iterable[(Int, Iterable[Timestamp], Iterable[String])])
+    */
+  def transformRdd(rdd : RDD[String]) : RDD[IpTimeUrlSessioned] = {
     val ipTimeUrlrdd = rdd.flatMap(convertToIpTimeUrl)
     val ipTimeUrlrddGroup = ipTimeUrlrdd.groupByKey()
     val ipTimeUrlrddGroupSorted = ipTimeUrlrddGroup.map(sortIpTimeUrlRdd)
     ipTimeUrlrddGroupSorted.map(splitInSession)
   }
 
+  /**
+    * Apply transformations and calculate session duration and URL count for each session
+    * @param rdd
+    * @return rdd of type (IP, Iterable[(SessionDur, URLcount)], TotalURLCount)
+    */
   def sessionize(rdd : RDD[String]) : RDD[IpTimeUrlSessionedSize] = {
     // Sessionize format (IP, (TIMESTAMP, URL))
-    val ipTimeUrlrddGroupSessioned = trasnformRdd(rdd)
+    val ipTimeUrlrddGroupSessioned = transformRdd(rdd)
     val sessionURLHits = ipTimeUrlrddGroupSessioned.map(x => (x._1 , x._2.map(y => (timeDiff(y._2.last, y._2.head) , y._3.size))))
     sessionURLHits.map(x=> (x._1 , x._2, x._2.map( y => y._2).sum))
   }
 
+  /**
+    * Apply transformations and calculate session dur for each session per IP
+    * @param rdd
+    * @return rdd of type (IP, Iterable[Session Dur])
+    */
   def averageSession ( rdd : RDD[String]) : RDD[IpTimeSessioned]= {
-    val ipTimeUrlrddGroupSessioned = trasnformRdd(rdd)
+    val ipTimeUrlrddGroupSessioned = transformRdd(rdd)
     ipTimeUrlrddGroupSessioned.map(x => (x._1, x._2.map(y => timeDiff(y._2.last, y._2.head))))
   }
+
+  /**
+    * Similar to sessionize method, only difference is drop duplicate URLs
+    * @param rdd
+    * @return rdd of type (IP, Iterable[(SessionDur, URLcount)], TotalURLCount)
+    */
   def uniqueURL ( rdd :RDD[String]) : RDD[IpTimeUrlSessionedSize] =  {
-    val ipTimeUrlrddGroupSessioned = trasnformRdd(rdd)
+    val ipTimeUrlrddGroupSessioned = transformRdd(rdd)
     val sessionURLHits = ipTimeUrlrddGroupSessioned.map(x => (x._1 , x._2.map(y => (timeDiff(y._2.last, y._2.head) , y._3.toList.distinct.size))))
     sessionURLHits.map(x=> (x._1 , x._2, x._2.map( y => y._2).sum))
   }
@@ -113,6 +165,7 @@ object WebPaytmLogRDD {
     val conf = new SparkConf().setAppName("WebPaytmLogRDD")
     val sc = new SparkContext(conf)
     val hdconf = sc.hadoopConfiguration
+    // Needed to access s3 storage
     hdconf.set("fs.s3a.access.key", sys.env("AWS_ACCESS_KEY_ID"))
     hdconf.set("fs.s3a.secret.key", sys.env("AWS_SECRETACCESS_KEY"))
     val logRDD = sc.textFile("s3a://paytmfile/2015_07_22_mktplace_shop_web_log_sample.log.gz")
@@ -127,10 +180,12 @@ object WebPaytmLogRDD {
         val avgRdd = averageSession(logRDD)
         val average = avgRdd.flatMap(x=> x._2).mean()
         println(s"${average}ms")
+        // Sesionize weblog with unique URLHits
       case 3 =>
         val sessionUniqueURL = uniqueURL(logRDD)
         val sessionUniqueURLResult = sessionUniqueURL.sortBy(_._3, false).take(10)
         sessionUniqueURLResult.foreach(println)
+        // Find most engaged IPs
       case 4 =>
         val IPTimeRdd = averageSession(logRDD)
         val mostEngagedIP = IPTimeRdd.map(x=> (x._1, x._2.max)).sortBy(_._2,false).take(10)
@@ -141,8 +196,22 @@ object WebPaytmLogRDD {
 
 object WebPaytmLogDS {
 
+
+
+  /**
+    * Define schema for DS
+    * @param IP Client IP
+    * @param T1 Initial timestamp
+    * @param DUR Duration between the next timestamp in the same session
+    * @param URL URL
+    */
   case class DFFinal(IP: String, T1 : Timestamp, DUR: Int, URL : String)
 
+  /**
+    * Transform RDD to get to the schema define above
+    * @param line Input log
+    * @return ArrayBuffer of case class DFFinal, which is applied to RDD as flatmap.
+    */
   def getFinalDS(line : IpTimeUrlGroup) : ArrayBuffer[DFFinal]= {
     var SessionTimeURL :ArrayBuffer[DFFinal] = ArrayBuffer()
     val ip = line._1
